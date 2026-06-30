@@ -1,12 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
-
+from matplotlib.colors import LogNorm
 
 k_B = 1
 
 NUM_STATES = 3
-NUM_TIME_STEPS = int(1e5)
-TIME_STEP_SIZE = 1e-3
+NUM_TIME_STEPS = int(1e4)
+TIME_STEP_SIZE = 1e-2
 
 T_HOT = 4.25
 T_COLD = 1.15
@@ -51,25 +51,34 @@ def evolve_distribution(p, R):
 def distance(p, T):
     equilibrium_distribution = define_Boltzmann_distribution(T)
 
-    D = STATE_ENERGIES * (p - equilibrium_distribution) / T
+    D = STATE_ENERGIES * (p - equilibrium_distribution) / (k_B * T)
     D += p * np.log(p)
     D -= equilibrium_distribution * np.log(equilibrium_distribution)
 
     return np.sum(D, axis=1)
 
 
+ax = plt.figure().add_subplot(projection='3d')
+temperatures = np.linspace(T_BATH, T_HOT, 30)
+times = np.arange(NUM_TIME_STEPS) * TIME_STEP_SIZE
+distances = np.zeros((NUM_TIME_STEPS, len(temperatures)))
+
 R = define_transition_rate_matrix(T_BATH)
 print(f"Transition rate matrix R =\n{R}")
 
-for T in [T_HOT, T_COLD]:
+for i, T in enumerate(temperatures):
     print("Temperature T =", T)
     
     p = define_Boltzmann_distribution(T)
     print("Initial Boltzmann distribution p =", p)
 
     s = evolve_distribution(p, R)
-    plt.plot(distance(s, T_BATH), label=f"T = {T}")
+    distances[:, i] = distance(s, T_BATH)
 
-plt.legend()
+X, Y = np.meshgrid(temperatures, times)
+ax.plot_surface(X, Y, distances, cmap='PuBu', norm=LogNorm(vmin=T_BATH, vmax=0.3))
+ax.set_xlabel('Initial temperature')
+ax.set_ylabel('Time')
+ax.set_zlabel('Distance to equilibrium')
 plt.show()
 
